@@ -13,6 +13,10 @@ class Globalize2Extension < Radiant::Extension
     Snippet  => [:content]
   }
   
+  extension_config do |config|
+    config.gem 'geoip', :source => 'http://github.com'
+  end    
+
   def self.default_language
     @@default_language ||= Radiant::Config['globalize.default_language'].blank? ? "en" : Radiant::Config['globalize.default_language']
   end
@@ -62,10 +66,6 @@ class Globalize2Extension < Radiant::Extension
       Page.send(:include, Globalize2::Compatibility::Paginate::GlobalizeTags)
       Page.send(:include, Globalize2::Compatibility::Paginate::PageExtensions)
     end
-    
-    extension_config do |config|
-      config.gem 'geoip', :source => 'http://github.com'
-    end    
   end
   
   def deactivate
