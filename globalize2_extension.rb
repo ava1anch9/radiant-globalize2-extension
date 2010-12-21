@@ -62,9 +62,32 @@ class Globalize2Extension < Radiant::Extension
       Page.send(:include, Globalize2::Compatibility::Paginate::GlobalizeTags)
       Page.send(:include, Globalize2::Compatibility::Paginate::PageExtensions)
     end
+    
+    extension_config do |config|
+      config.gem 'geoip', :source => 'http://github.com'
+    end    
   end
   
   def deactivate
   end
-  
+
+  def ip_lookup(ip)
+    g = GeoIP.new( File.join(File.dirname(__FILE__), '..', '..', 'gems', 'geoip-0.8.6', 'GeoIP.dat'))
+    r = g.country(ip)
+    country_code = r[3]
+    case country_code
+      when 'RU'
+        'ru'
+      when 'GB'
+        'uk'
+      when 'AU'
+        'au'
+      when 'FR'
+        'fr'
+      when ' US'
+        'us'
+      else
+        'us'
+    end
+  end  
 end
