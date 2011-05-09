@@ -36,7 +36,7 @@ module Globalize2
       <pre><code><r:locale /></code></pre>
     }
     tag 'locale' do |tag|
-      I18n.locale.to_s
+      Globalize2Extension.content_locale
     end
     
     desc %{
@@ -64,8 +64,11 @@ module Globalize2
       raise TagError.new("'codes' attribute must be set") if tag.attr['codes'].blank?
       
       result = []
-      codes = tag.attr["codes"].split("|").each do |code|
+      codes = tag.attr["codes"].split("|")
+      codes.each do |code|
         hash[:code] = code
+        tag.locals.first = code == codes.first
+        tag.locals.last = code == codes.last
         if I18n.locale.to_s == code
           result << (hash[:active] || hash[:normal]).call
         else
@@ -83,6 +86,13 @@ module Globalize2
         hash = tag.locals.locale
         hash[symbol] = tag.block
       end
+    end
+
+    tag "locales:if_first" do |tag|
+      tag.expand if tag.locals.first
+    end
+    tag "locales:if_last" do |tag|
+      tag.expand if tag.locals.last
     end
   
     tag 'locales:code' do |tag|
@@ -169,15 +179,46 @@ module Globalize2
       part = tag.locals.page.part(name)
       tag.expand if part.nil? || !part.translated_locales.include?(I18n.locale.to_sym)
     end
+
+    desc %{
+      Renders the date based on the current page (by default when it was published or created).
+      The format attribute uses the same formating codes used by the Ruby @strftime@ function. By
+      default it's set to @%A, %B %d, %Y@.  The @for@ attribute selects which date to render.  Valid
+      options are @published_at@, @created_at@, @updated_at@, and @now@. @now@ will render the
+      current date/time, regardless of the  page.
+
+      *Usage:*
+
+      <pre><code><r:date [format="%A, %B %d, %Y"] [for="published_at"]/></code></pre>
+    }
+    tag 'date' do |tag|
+      page = tag.locals.page
+      format = (tag.attr['format'] || '%A, %B %d, %Y')
+      time_attr = tag.attr['for']
+      date = if time_attr
+        case
+        when time_attr == 'now'
+          Time.zone.now
+        when ['published_at', 'created_at', 'updated_at'].include?(time_attr)
+          page[time_attr]
+        else
+          raise TagError, "Invalid value for 'for' attribute."
+        end
+      else
+        page.published_at || page.created_at
+      end
+      I18n.l date , :format => format
+    end
+
   
     private
       # Allows you to switch the current locale while within the block.
       # The previously current locale is reset after the block is finished.
       def switch_locale(locale)
-        current_locale = I18n.locale
-        I18n.locale = locale
+        current_locale = Globalize2Extension.content_locale
+        Globalize2Extension.content_locale = locale
         result = yield
-        I18n.locale = current_locale
+        Globalize2Extension.content_locale = current_locale
         result
       end
   end

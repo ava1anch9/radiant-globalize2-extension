@@ -6,7 +6,7 @@ describe Admin::PagesController do
   before(:each) do
     login_as :admin
     
-    I18n.default_locale = "en"
+    I18n.default_locale = :"en"
     @home_page = Factory.create(:page, :title => "Home Page", :slug => "/")
   end
   

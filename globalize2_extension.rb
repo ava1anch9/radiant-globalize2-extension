@@ -1,35 +1,49 @@
 # Uncomment this if you reference any of your controllers in activate
 # require_dependency 'application'
+require 'globalize2/form_builder_extensions'
 
 class Globalize2Extension < Radiant::Extension
-  version "0.1"
+  version "0.2.8"
   description "Translate content in Radiant CMS using the Globalize2 Rails plugin."
   url "http://blog.aissac.ro/radiant/globalize2-extension/"
 
   GLOBALIZABLE_CONTENT = {
-    Page     => [:title, :slug, :breadcrumb, :description, :keywords],
+
+    Page     => [:title, :slug, :breadcrumb],
     PagePart => [:content],
     Layout   => [:content],
-    Snippet  => [:content]
-  }
+    Snippet  => [:content],
+    PageField => [:content]
+  } 
   
   extension_config do |config|
     config.gem 'geoip', :source => 'http://github.com'
   end    
 
   def self.default_language
-    @@default_language ||= Radiant::Config['globalize.default_language'].blank? ? "en" : Radiant::Config['globalize.default_language']
+    @@default_language ||= Radiant::Config['globalize.default_language']
   end
   
   def self.languages
-    @@languages ||= Radiant::Config['globalize.languages'].blank? ? [] : Radiant::Config['globalize.languages'].split(",").map(&:to_s)
+    @@languages ||= Radiant::Config['globalize.languages'].split(",")
   end
   
   def self.locales
-    @@locales ||= [default_language, *languages].map(&:to_s)
+    @@locales ||= ([default_language] | languages)
+  end
+  
+  def self.content_locale
+    Thread.current[:content_locale] || default_language
+  end
+  
+  def self.content_locale= locale
+    Thread.current[:content_locale] = locale
   end
   
   def activate
+    Radiant::Config['globalize.default_language'] ||= 'en'
+    Radiant::Config['globalize.languages']        ||= 'en' # Hack: Config won't write empty settings to database.
+    
     require 'i18n/backend/fallbacks'
     I18n::Backend::Simple.send(:include, I18n::Backend::Fallbacks)
 
@@ -46,22 +60,35 @@ class Globalize2Extension < Radiant::Extension
     
     I18n.default_locale = Globalize2Extension.default_language
     
-    ApplicationController.send(:include, Globalize2::ApplicationControllerExtensions)
     Admin::PagesController.send(:include, Globalize2::PagesControllerExtensions)
-    Admin::PagesController.send(:include, Globalize2::ApplicationControllerExtensions)
+    Admin::PagesController.send(:include, Globalize2::GlobalizedFieldsControllerExtension)
+    Admin::LayoutsController.send(:include, Globalize2::GlobalizedFieldsControllerExtension )
+    Admin::SnippetsController.send(:include, Globalize2::GlobalizedFieldsControllerExtension)
+
     SiteController.send(:include, Globalize2::SiteControllerExtensions)
-    
+
     GLOBALIZABLE_CONTENT.each do |model, columns|
       model.send(:translates, *columns)
+      #p model.ancestors
     end
-    
+
     Page.send(:include, Globalize2::GlobalizeTags)
-    Page.send(:include, Globalize2::PageExtensions)
+
+    Page.class_eval {
+      
+      #extend Globalize2::PageExtensions::ClassMethods
+      include  Globalize2::PageExtensions::InstanceMethods
+    }
+
+    #Page.send(:include, Globalize2::PageExtensions)
     PagePart.send(:include, Globalize2::PagePartExtensions)
 
     #compatibility
     CopyMove::Model.send(:include, Globalize2::Compatibility::CopyMove::CopyMoveModelExtensions) if defined?(CopyMoveExtension)
     ArchivePage.send(:include, Globalize2::Compatibility::Archive::ArchivePageExtensions) if defined?(ArchiveExtension)
+    #ArchivePage.send(:include, Globalize2::GlobalizeTags) if defined?(ArchiveExtension)
+    Page.send(:include, Globalize2::Compatibility::Vhost::PageExtensions) if defined?(VhostExtension)
+
     if defined?(PaginateExtension)
       Page.send(:include, Globalize2::Compatibility::Paginate::GlobalizeTags)
       Page.send(:include, Globalize2::Compatibility::Paginate::PageExtensions)

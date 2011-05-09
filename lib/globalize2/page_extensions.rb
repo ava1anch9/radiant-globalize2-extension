@@ -1,19 +1,27 @@
 module Globalize2
   module PageExtensions
+    module InstanceMethods
     def self.included(base)
       base.validate.delete_if { |v| v.options[:scope] == :parent_id }
       base.send(:validate, :unique_slug)
       base.reflections[:children].options[:order] = 'pages.virtual DESC'
-      
+
+
       base.class_eval do
+        extend Globalize2::LocalizedContent
+        
         def self.locale
           I18n.locale
         end
+        #eigenclass = class << self; self; end
+
+        translates :title, :slug, :breadcrumb, :description, :keywords
+        localized_content_for :title, :slug, :breadcrumb
         
         attr_accessor :reset_translations
         alias_method_chain 'tag:link', :globalize
         alias_method_chain 'tag:children:each', :globalize
-        alias_method_chain :url, :globalize
+        alias_method_chain :path, :globalize
         alias_method_chain :save_translations!, :reset
         
         def self.scope_locale(locale, &block)
@@ -24,7 +32,8 @@ module Globalize2
       end
     end
     
-    def unique_slug      
+        
+    def unique_slug
       options = {
         "pages.parent_id = ?" => self.parent_id,
         "ptrls.slug = ?" => self.slug,
@@ -50,6 +59,7 @@ module Globalize2
       
     end
 
+
     def save_translations_with_reset!
       if reset_translations && I18n.locale.to_s != Globalize2Extension.default_language
         self.translations.find_by_locale(I18n.locale.to_s).destroy
@@ -61,14 +71,14 @@ module Globalize2
       end
     end
     
-    def url_with_globalize
-      unless parent
-        '/' + I18n.locale.to_s + url_without_globalize
+    def path_with_globalize
+      unless parent || Globalize2Extension.locales.size <= 1
+        '/' + Globalize2Extension.content_locale.to_s + path_without_globalize
       else
-        url_without_globalize
+        path_without_globalize
       end
     end
-    
+        
     def clone
       new_page = super
       translations.each do |t|
@@ -76,5 +86,6 @@ module Globalize2
       end
       new_page
     end
+      end
   end
 end
