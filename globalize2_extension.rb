@@ -88,7 +88,8 @@ class Globalize2Extension < Radiant::Extension
     ArchivePage.send(:include, Globalize2::Compatibility::Archive::ArchivePageExtensions) if defined?(ArchiveExtension)
     #ArchivePage.send(:include, Globalize2::GlobalizeTags) if defined?(ArchiveExtension)
     Page.send(:include, Globalize2::Compatibility::Vhost::PageExtensions) if defined?(VhostExtension)
-
+    [StylesheetPage, JavascriptPage].each { |k| k.send(:include, Globalize2::Compatibility::Sheet::SheetExtensions) } if defined?(SheetsExtension)
+    
     if defined?(PaginateExtension)
       Page.send(:include, Globalize2::Compatibility::Paginate::GlobalizeTags)
       Page.send(:include, Globalize2::Compatibility::Paginate::PageExtensions)
