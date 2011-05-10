@@ -1,6 +1,6 @@
 module Globalize2
   module Compatibility
-    module Sheet::SheetExtensions
+    module Sheets::SheetExtensions
       def self.included(base)
         base.class_eval do
           def self.root

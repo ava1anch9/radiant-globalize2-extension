@@ -88,7 +88,7 @@ class Globalize2Extension < Radiant::Extension
     ArchivePage.send(:include, Globalize2::Compatibility::Archive::ArchivePageExtensions) if defined?(ArchiveExtension)
     #ArchivePage.send(:include, Globalize2::GlobalizeTags) if defined?(ArchiveExtension)
     Page.send(:include, Globalize2::Compatibility::Vhost::PageExtensions) if defined?(VhostExtension)
-    [StylesheetPage, JavascriptPage].each { |k| k.send(:include, Globalize2::Compatibility::Sheet::SheetExtensions) } if defined?(SheetsExtension)
+    [StylesheetPage, JavascriptPage].each { |k| k.send(:include, Globalize2::Compatibility::Sheets::SheetExtensions) } if defined?(SheetsExtension)
     
     if defined?(PaginateExtension)
       Page.send(:include, Globalize2::Compatibility::Paginate::GlobalizeTags)
@@ -100,7 +100,7 @@ class Globalize2Extension < Radiant::Extension
   end
 
   def ip_lookup(ip)
-    g = GeoIP.new( File.join(File.dirname(__FILE__), '..', '..', 'gems', 'geoip-0.8.6', 'GeoIP.dat'))
+    g = GeoIP.new( File.join(File.dirname(__FILE__), 'GeoIP.dat') )
     r = g.country(ip)
     country_code = r[3]
     case country_code
